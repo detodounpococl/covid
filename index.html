@@ -7,7 +7,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
+/* ============================================================
+   VARIABLES & RESET
+============================================================ */
 :root {
   --bg:     #0B1622;
   --bg2:    #111D2E;
@@ -20,6 +26,7 @@
   --amber:  #FFBA49;
   --coral:  #FF6B6B;
   --purple: #9B72FF;
+  --green:  #4ADE80;
   --text:   #E2EEF9;
   --text2:  #8BAAC8;
   --text3:  #4D6B8A;
@@ -32,15 +39,28 @@
 html { scroll-behavior:smooth; }
 body { background:var(--bg); color:var(--text); font-family:var(--sans); font-size:15px; line-height:1.6; min-height:100vh; }
 
+/* ============================================================
+   LAYOUT
+============================================================ */
 .shell { max-width:1440px; margin:0 auto; padding:0 24px 60px; }
 
-.header { position:sticky; top:0; z-index:100; background:rgba(11,22,34,0.92); backdrop-filter:blur(16px); border-bottom:1px solid var(--border); padding:14px 24px; }
-.header-inner { max-width:1440px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+/* ============================================================
+   HEADER
+============================================================ */
+.header {
+  position:sticky; top:0; z-index:100;
+  background:rgba(11,22,34,0.95);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+  padding:12px 24px;
+}
+.header-inner { max-width:1440px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
 .brand { display:flex; align-items:center; gap:12px; }
 .brand-icon { width:38px; height:38px; background:linear-gradient(135deg,var(--teal),var(--blue)); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
 .brand-text h1 { font-size:16px; font-weight:700; letter-spacing:-0.3px; }
 .brand-text p  { font-size:11px; color:var(--text3); font-family:var(--mono); }
-.header-meta { display:flex; align-items:center; gap:20px; flex-wrap:wrap; }
+.header-right { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+.header-meta  { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
 .meta-badge { display:flex; flex-direction:column; align-items:flex-end; }
 .meta-badge span   { font-size:11px; color:var(--text3); }
 .meta-badge strong { font-size:13px; font-family:var(--mono); color:var(--teal); }
@@ -48,13 +68,61 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); font-si
 .live-dot::before { content:''; width:8px; height:8px; border-radius:50%; background:var(--teal); box-shadow:0 0 0 2px rgba(0,201,167,0.2); animation:pulse 2s infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
-.author-bar { background:var(--bg3); border-bottom:1px solid var(--border); padding:6px 24px; font-size:11px; color:var(--text3); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px; }
+/* ============================================================
+   EXPORT BUTTONS
+============================================================ */
+.export-bar {
+  display:flex; align-items:center; gap:6px;
+}
+.export-btn {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:7px 13px; border-radius:var(--r2);
+  font-size:12px; font-weight:600; font-family:var(--sans);
+  cursor:pointer; border:1px solid; transition:all .15s;
+  white-space:nowrap;
+}
+.export-btn svg { width:15px; height:15px; flex-shrink:0; }
+.btn-excel  { background:rgba(74,222,128,.08); border-color:rgba(74,222,128,.25); color:#4ADE80; }
+.btn-excel:hover  { background:rgba(74,222,128,.18); border-color:rgba(74,222,128,.5); }
+.btn-pdf    { background:rgba(255,107,107,.08); border-color:rgba(255,107,107,.25); color:var(--coral); }
+.btn-pdf:hover    { background:rgba(255,107,107,.18); border-color:rgba(255,107,107,.5); }
+.btn-print  { background:rgba(74,158,255,.08); border-color:rgba(74,158,255,.25); color:var(--blue); }
+.btn-print:hover  { background:rgba(74,158,255,.18); border-color:rgba(74,158,255,.5); }
+.btn-divider { width:1px; height:22px; background:var(--border); }
+
+/* AUTHOR BAR */
+.author-bar { background:var(--bg3); border-bottom:1px solid var(--border); padding:5px 24px; font-size:11px; color:var(--text3); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px; }
 .author-bar a { color:var(--teal2); text-decoration:none; }
 .author-bar a:hover { color:var(--teal); }
 
-.section-title { display:flex; align-items:center; gap:10px; font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); margin:36px 0 16px; }
+/* ============================================================
+   TABS
+============================================================ */
+.tab-nav {
+  display:flex; align-items:center; gap:4px;
+  border-bottom:1px solid var(--border);
+  padding: 20px 0 0; margin-bottom:0;
+}
+.tab-btn {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:10px 20px; font-size:13px; font-weight:600;
+  color:var(--text3); background:transparent;
+  border:none; border-bottom:2px solid transparent;
+  cursor:pointer; transition:all .15s;
+  font-family:var(--sans); margin-bottom:-1px;
+}
+.tab-btn svg { width:16px; height:16px; }
+.tab-btn:hover { color:var(--text2); }
+.tab-btn.active { color:var(--teal); border-bottom-color:var(--teal); }
+
+.tab-pane { display:none; }
+.tab-pane.active { display:block; }
+
+/* SECTION TITLE */
+.section-title { display:flex; align-items:center; gap:10px; font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); margin:32px 0 16px; }
 .section-title::before { content:''; width:3px; height:16px; background:var(--teal); border-radius:2px; flex-shrink:0; }
 
+/* KPI CARDS */
 .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-bottom:8px; }
 .kpi-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:20px 22px; position:relative; overflow:hidden; transition:border-color .2s, transform .15s; }
 .kpi-card:hover { border-color:rgba(0,201,167,0.3); transform:translateY(-2px); }
@@ -71,8 +139,10 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); font-si
 .kpi-trend.down { background:rgba(255,107,107,.12); color:var(--coral); }
 .kpi-trend.up   { background:rgba(0,201,167,.12);   color:var(--teal); }
 
+/* ALERT */
 .alert-strip { background:rgba(255,186,73,.06); border:1px solid rgba(255,186,73,.2); border-radius:var(--r2); padding:10px 16px; font-size:12px; color:var(--amber); display:flex; align-items:center; gap:10px; margin-bottom:8px; }
 
+/* CHARTS */
 .charts-row  { display:grid; grid-template-columns:2fr 1fr; gap:14px; margin-bottom:14px; }
 .charts-row2 { display:grid; grid-template-columns:1fr 1fr;  gap:14px; margin-bottom:14px; }
 @media (max-width:900px) { .charts-row, .charts-row2 { grid-template-columns:1fr; } }
@@ -81,6 +151,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); font-si
 .chart-card-title small { font-size:11px; color:var(--text3); font-weight:400; }
 .chart-wrap { position:relative; }
 
+/* TABLE */
 .table-card   { background:var(--card); border:1px solid var(--border); border-radius:var(--r); overflow:hidden; margin-bottom:14px; }
 .table-scroll { overflow-x:auto; }
 table  { width:100%; border-collapse:collapse; font-size:13px; }
@@ -88,23 +159,91 @@ thead  { background:rgba(0,201,167,.06); }
 th { padding:12px 14px; text-align:left; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.8px; color:var(--text3); border-bottom:1px solid var(--border); white-space:nowrap; }
 td { padding:10px 14px; border-bottom:1px solid rgba(0,0,0,.15); color:var(--text); }
 tr:last-child td { border-bottom:none; }
-tr:hover td    { background:rgba(255,255,255,.02); }
+tr:hover td { background:rgba(255,255,255,.02); }
 td.num { font-family:var(--mono); font-size:13px; text-align:right; }
 .total-row td { background:rgba(0,201,167,.04); font-weight:600; color:var(--teal2); }
 .year-badge { display:inline-block; background:rgba(0,201,167,.1); color:var(--teal); border-radius:4px; padding:1px 7px; font-family:var(--mono); font-size:12px; font-weight:600; }
-.vac-dot  { width:8px; height:8px; border-radius:50%; flex-shrink:0; display:inline-block; }
-.vac-tag  { display:inline-flex; align-items:center; gap:6px; font-weight:500; }
+.vac-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; display:inline-block; }
+.vac-tag { display:inline-flex; align-items:center; gap:6px; font-weight:500; }
 
+/* FILTER BAR */
 .filter-bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
 .filter-btn { background:var(--bg3); border:1px solid var(--border); border-radius:20px; padding:6px 14px; font-size:12px; color:var(--text2); cursor:pointer; transition:all .15s; font-family:var(--sans); }
 .filter-btn:hover, .filter-btn.active { background:rgba(0,201,167,.12); border-color:rgba(0,201,167,.4); color:var(--teal); }
 
+/* ============================================================
+   RESUMEN EJECUTIVO
+============================================================ */
+.exec-highlights {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:14px; margin-bottom:28px;
+}
+.highlight-card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--r); padding:18px 20px;
+  display:flex; gap:14px; align-items:flex-start;
+}
+.highlight-icon {
+  width:38px; height:38px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; flex-shrink:0;
+}
+.hi-teal   { background:rgba(0,201,167,.12); }
+.hi-amber  { background:rgba(255,186,73,.12); }
+.hi-coral  { background:rgba(255,107,107,.12); }
+.hi-blue   { background:rgba(74,158,255,.12); }
+.hi-purple { background:rgba(155,114,255,.12); }
+.highlight-body h3 { font-size:13px; font-weight:700; color:var(--text); margin-bottom:3px; }
+.highlight-body p  { font-size:12px; color:var(--text2); line-height:1.5; }
+
+.exec-table-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); overflow:hidden; margin-bottom:28px; }
+
+/* Variación YoY en tabla ejecutiva */
+.var-pos { color:var(--green);  font-family:var(--mono); font-size:12px; }
+.var-neg { color:var(--coral);  font-family:var(--mono); font-size:12px; }
+.var-neu { color:var(--text3);  font-family:var(--mono); font-size:12px; }
+.badge-activo   { display:inline-block; background:rgba(155,114,255,.12); color:var(--purple); border-radius:4px; padding:1px 8px; font-size:11px; font-weight:600; }
+.badge-cerrado  { display:inline-block; background:rgba(0,201,167,.08);   color:var(--teal2);  border-radius:4px; padding:1px 8px; font-size:11px; font-weight:600; }
+
+.mes-bar-wrap   { display:flex; gap:2px; align-items:flex-end; height:22px; }
+.mes-bar        { width:8px; border-radius:2px 2px 0 0; background:var(--teal); opacity:.7; transition:opacity .15s; }
+.mes-bar:hover  { opacity:1; }
+
+.exec-notas {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--r); padding:22px 26px;
+}
+.exec-notas h3 { font-size:13px; font-weight:700; color:var(--text2); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+.exec-notas ul { list-style:none; display:flex; flex-direction:column; gap:10px; }
+.exec-notas li { font-size:13px; color:var(--text2); display:flex; gap:10px; align-items:flex-start; }
+.exec-notas li::before { content:'›'; color:var(--teal); font-weight:700; flex-shrink:0; margin-top:1px; }
+
+/* ============================================================
+   FOOTER
+============================================================ */
 .footer { margin-top:40px; border-top:1px solid var(--border); padding-top:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; font-size:11px; color:var(--text3); }
 .footer a { color:var(--teal2); text-decoration:none; }
+
+/* ============================================================
+   PRINT STYLES
+============================================================ */
+@media print {
+  body { background:#fff; color:#111; font-size:12px; }
+  .header, .author-bar, .export-bar, .tab-nav, .filter-bar, .alert-strip { display:none !important; }
+  .shell { padding:0; max-width:100%; }
+  .tab-pane { display:block !important; }
+  .kpi-value { -webkit-text-fill-color:#111 !important; color:#111 !important; }
+  .kpi-card, .chart-card, .table-card, .exec-table-card, .exec-notas, .highlight-card { border:1px solid #ccc !important; background:#fff !important; }
+  .kpi-label, .kpi-sub, .section-title, th, .chart-card-title { color:#555 !important; }
+  td, .kpi-value, .highlight-body h3 { color:#111 !important; }
+  canvas { max-width:100% !important; }
+  @page { margin:15mm; }
+}
 </style>
 </head>
 <body>
 
+<!-- HEADER -->
 <header class="header">
   <div class="header-inner">
     <div class="brand">
@@ -114,10 +253,35 @@ td.num { font-family:var(--mono); font-size:13px; text-align:right; }
         <p>Monitoreo de campaña · Sistema de información sanitaria</p>
       </div>
     </div>
-    <div class="header-meta">
-      <div class="meta-badge"><span>Datos hasta</span><strong id="datos-hasta">—</strong></div>
-      <div class="meta-badge"><span>Fecha y hora</span><strong id="live-datetime">—</strong></div>
-      <div class="live-dot" id="live-status">Datos embebidos</div>
+    <div class="header-right">
+      <!-- EXPORT BUTTONS -->
+      <div class="export-bar">
+        <button class="export-btn btn-excel" onclick="exportExcel()" title="Exportar a Excel">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/>
+          </svg>
+          Excel
+        </button>
+        <button class="export-btn btn-pdf" onclick="exportPDF()" title="Exportar a PDF">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+          </svg>
+          PDF
+        </button>
+        <div class="btn-divider"></div>
+        <button class="export-btn btn-print" onclick="window.print()" title="Imprimir">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+          </svg>
+          Imprimir
+        </button>
+      </div>
+      <!-- META BADGES -->
+      <div class="header-meta">
+        <div class="meta-badge"><span>Datos hasta</span><strong id="datos-hasta">—</strong></div>
+        <div class="meta-badge"><span>Fecha y hora</span><strong id="live-datetime">—</strong></div>
+        <div class="live-dot" id="live-status">Datos embebidos</div>
+      </div>
     </div>
   </div>
 </header>
@@ -127,90 +291,147 @@ td.num { font-family:var(--mono); font-size:13px; text-align:right; }
   <span>Dashboard campaña vacunación COVID-19 · Datos: Consolidado_COVID.xlsx</span>
 </div>
 
+<!-- MAIN -->
 <div class="shell">
 
-  <p class="section-title">Indicadores clave</p>
-  <div class="kpi-grid">
-    <div class="kpi-card c-teal">
-      <div class="kpi-label">Total histórico acumulado</div>
-      <div class="kpi-value" id="kpi-total">—</div>
-      <div class="kpi-sub"  id="kpi-total-sub">—</div>
-    </div>
-    <div class="kpi-card c-blue">
-      <div class="kpi-label">Año de mayor cobertura</div>
-      <div class="kpi-value" id="kpi-peak-val">—</div>
-      <div class="kpi-sub"  id="kpi-peak-sub">—</div>
-    </div>
-    <div class="kpi-card c-amber">
-      <div class="kpi-label">Último año cerrado</div>
-      <div class="kpi-value" id="kpi-last">—</div>
-      <div class="kpi-sub"  id="kpi-last-sub">—</div>
-      <div class="kpi-trend down" id="kpi-tend">↘ —%</div>
-    </div>
-    <div class="kpi-card c-purple">
-      <div class="kpi-label">Año en curso</div>
-      <div class="kpi-value" id="kpi-actual">—</div>
-      <div class="kpi-sub"  id="kpi-actual-sub">—</div>
-    </div>
-    <div class="kpi-card c-coral">
-      <div class="kpi-label">Vacunas disponibles (histórico)</div>
-      <div class="kpi-value" id="kpi-vacunas">6</div>
-      <div class="kpi-sub">Pfizer · Moderna · Sinovac · AstraZeneca · CanSino · Extranjero</div>
-    </div>
+  <!-- TAB NAV -->
+  <div class="tab-nav">
+    <button class="tab-btn active" id="tab-dashboard" onclick="switchTab('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </button>
+    <button class="tab-btn" id="tab-ejecutivo" onclick="switchTab('ejecutivo')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Resumen Ejecutivo
+    </button>
   </div>
 
-  <div class="alert-strip" id="alert-strip" style="display:none">⚠️ <span id="alert-msg">—</span></div>
+  <!-- =================== TAB: DASHBOARD =================== -->
+  <div class="tab-pane active" id="pane-dashboard">
 
-  <p class="section-title">Gráficos de campaña</p>
-  <div class="filter-bar" id="filter-bar">
-    <button class="filter-btn active" data-filter="todos" onclick="filterYear(this,'todos')">Todos los años</button>
-  </div>
+    <p class="section-title">Indicadores clave</p>
+    <div class="kpi-grid">
+      <div class="kpi-card c-teal">
+        <div class="kpi-label">Total histórico acumulado</div>
+        <div class="kpi-value" id="kpi-total">—</div>
+        <div class="kpi-sub"  id="kpi-total-sub">—</div>
+      </div>
+      <div class="kpi-card c-blue">
+        <div class="kpi-label">Año de mayor cobertura</div>
+        <div class="kpi-value" id="kpi-peak-val">—</div>
+        <div class="kpi-sub"  id="kpi-peak-sub">—</div>
+      </div>
+      <div class="kpi-card c-amber">
+        <div class="kpi-label">Último año cerrado</div>
+        <div class="kpi-value" id="kpi-last">—</div>
+        <div class="kpi-sub"  id="kpi-last-sub">—</div>
+        <div class="kpi-trend down" id="kpi-tend">↘ —%</div>
+      </div>
+      <div class="kpi-card c-purple">
+        <div class="kpi-label">Año en curso</div>
+        <div class="kpi-value" id="kpi-actual">—</div>
+        <div class="kpi-sub"  id="kpi-actual-sub">—</div>
+      </div>
+      <div class="kpi-card c-coral">
+        <div class="kpi-label">Vacunas disponibles (histórico)</div>
+        <div class="kpi-value" id="kpi-vacunas">6</div>
+        <div class="kpi-sub">Pfizer · Moderna · Sinovac · AstraZeneca · CanSino · Extranjero</div>
+      </div>
+    </div>
 
-  <div class="charts-row">
-    <div class="chart-card">
-      <div class="chart-card-title">Dosis administradas por año <small>Total acumulado anual</small></div>
-      <div class="chart-wrap"><canvas id="chartAnual" height="260"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-card-title">Distribución por vacuna <small>Histórico total</small></div>
-      <div class="chart-wrap"><canvas id="chartVacuna" height="260"></canvas></div>
-    </div>
-  </div>
+    <div class="alert-strip" id="alert-strip" style="display:none">⚠️ <span id="alert-msg">—</span></div>
 
-  <div class="charts-row2">
-    <div class="chart-card">
-      <div class="chart-card-title">Tendencia mensual — año actual vs anterior <small id="chart3-subtitle">—</small></div>
-      <div class="chart-wrap"><canvas id="chartMensual" height="220"></canvas></div>
+    <p class="section-title">Gráficos de campaña</p>
+    <div class="filter-bar" id="filter-bar">
+      <button class="filter-btn active" data-filter="todos" onclick="filterYear(this,'todos')">Todos los años</button>
     </div>
-    <div class="chart-card">
-      <div class="chart-card-title">Vacunas por año (barras apiladas) <small>Composición anual</small></div>
-      <div class="chart-wrap"><canvas id="chartStack" height="220"></canvas></div>
-    </div>
-  </div>
 
-  <p class="section-title">Resumen detallado por año y vacuna</p>
-  <div class="table-card">
-    <div class="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th>Año</th><th>Vacuna</th>
-            <th style="text-align:right">Total</th>
-            <th style="text-align:right">Ene</th><th style="text-align:right">Feb</th>
-            <th style="text-align:right">Mar</th><th style="text-align:right">Abr</th>
-            <th style="text-align:right">May</th><th style="text-align:right">Jun</th>
-            <th style="text-align:right">Jul</th><th style="text-align:right">Ago</th>
-            <th style="text-align:right">Sep</th><th style="text-align:right">Oct</th>
-            <th style="text-align:right">Nov</th><th style="text-align:right">Dic</th>
-          </tr>
-        </thead>
-        <tbody id="tabla-body">
-          <tr><td colspan="15" style="text-align:center;color:var(--text3);padding:24px">Cargando datos…</td></tr>
-        </tbody>
-      </table>
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-card-title">Dosis administradas por año <small>Total acumulado anual</small></div>
+        <div class="chart-wrap"><canvas id="chartAnual" height="260"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Distribución por vacuna <small>Histórico total</small></div>
+        <div class="chart-wrap"><canvas id="chartVacuna" height="260"></canvas></div>
+      </div>
     </div>
-  </div>
 
+    <div class="charts-row2">
+      <div class="chart-card">
+        <div class="chart-card-title">Tendencia mensual — año actual vs anterior <small id="chart3-subtitle">—</small></div>
+        <div class="chart-wrap"><canvas id="chartMensual" height="220"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Vacunas por año (barras apiladas) <small>Composición anual</small></div>
+        <div class="chart-wrap"><canvas id="chartStack" height="220"></canvas></div>
+      </div>
+    </div>
+
+    <p class="section-title">Resumen detallado por año y vacuna</p>
+    <div class="table-card">
+      <div class="table-scroll">
+        <table id="tabla-detalle">
+          <thead>
+            <tr>
+              <th>Año</th><th>Vacuna</th>
+              <th style="text-align:right">Total</th>
+              <th style="text-align:right">Ene</th><th style="text-align:right">Feb</th>
+              <th style="text-align:right">Mar</th><th style="text-align:right">Abr</th>
+              <th style="text-align:right">May</th><th style="text-align:right">Jun</th>
+              <th style="text-align:right">Jul</th><th style="text-align:right">Ago</th>
+              <th style="text-align:right">Sep</th><th style="text-align:right">Oct</th>
+              <th style="text-align:right">Nov</th><th style="text-align:right">Dic</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-body">
+            <tr><td colspan="15" style="text-align:center;color:var(--text3);padding:24px">Cargando datos…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /pane-dashboard -->
+
+  <!-- =================== TAB: RESUMEN EJECUTIVO =================== -->
+  <div class="tab-pane" id="pane-ejecutivo">
+
+    <p class="section-title">Puntos destacados de la campaña</p>
+    <div class="exec-highlights" id="exec-highlights">
+      <!-- generado por JS -->
+    </div>
+
+    <p class="section-title">Resumen por año — vista ejecutiva</p>
+    <div class="exec-table-card">
+      <div class="table-scroll">
+        <table id="tabla-ejecutiva">
+          <thead>
+            <tr>
+              <th>Año</th>
+              <th style="text-align:right">Total dosis</th>
+              <th>Vacunas activas</th>
+              <th>Mes pico</th>
+              <th style="text-align:right">Dosis pico</th>
+              <th style="text-align:right">Var. vs año ant.</th>
+              <th style="text-align:center">Distribución mensual</th>
+              <th style="text-align:center">Estado</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-ejecutiva">
+            <tr><td colspan="8" style="text-align:center;color:var(--text3);padding:24px">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <p class="section-title">Notas de análisis</p>
+    <div class="exec-notas" id="exec-notas">
+      <!-- generado por JS -->
+    </div>
+
+  </div><!-- /pane-ejecutivo -->
+
+  <!-- FOOTER -->
   <footer class="footer">
     <span>Autor: <strong>Rodrigo Villalobos R.</strong> · <a href="mailto:rodrigo.villalobos@redsalud.gov.cl">rodrigo.villalobos@redsalud.gov.cl</a></span>
     <span>Actualizado al: <strong id="footer-update">—</strong></span>
@@ -222,12 +443,7 @@ td.num { font-family:var(--mono); font-size:13px; text-align:right; }
 <script>
 /* ============================================================
    ÚNICO JSON DE DATOS
-   Para actualizar: edita sólo el objeto DATA de abajo,
-   o coloca un archivo data/datos.json junto al index.html.
-
-   Convención:
-     en_curso: true  →  año en progreso (sólo uno)
-     sin en_curso    →  año cerrado / histórico
+   Convención:  en_curso: true  →  año en progreso (sólo uno)
 ============================================================ */
 const DATA = {
   "meta": {
@@ -302,16 +518,27 @@ const DATA = {
    CONSTANTES
 ============================================================ */
 const MESES_CORTOS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MESES_FULL   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const VAC_COLORS   = {
   PFIZER:'#4A9EFF', MODERNA:'#00C9A7', SINOVAC:'#FFBA49',
   ASTRAZENECA:'#9B72FF', CANSINO:'#FF6B6B', EXTRANJERO:'#63E2C6'
 };
 
-/* Derivar histórico y actual del mismo array */
 const datosHistoricos = () => DATA.datos.filter(d => !d.en_curso);
 const datoActual      = () => DATA.datos.find(d => d.en_curso) || DATA.datos[DATA.datos.length - 1];
 
-function fmt(n) { return (n===null||n===undefined) ? '—' : Number(n).toLocaleString('es-CL'); }
+function fmt(n)  { return (n===null||n===undefined) ? '—' : Number(n).toLocaleString('es-CL'); }
+function fmtRaw(n) { return Number(n).toLocaleString('es-CL'); }
+
+/* ============================================================
+   TABS
+============================================================ */
+function switchTab(name) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('pane-' + name).classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
 
 /* ============================================================
    RELOJ
@@ -331,8 +558,7 @@ function renderKPIs() {
   const anos = hist.map(d => d.ano);
 
   document.getElementById('kpi-total').textContent     = fmt(DATA.meta.total_historico);
-  document.getElementById('kpi-total-sub').textContent =
-    `dosis administradas ${Math.min(...anos)}–${Math.max(...anos)}`;
+  document.getElementById('kpi-total-sub').textContent = `dosis administradas ${Math.min(...anos)}–${Math.max(...anos)}`;
 
   const peak = [...hist].sort((a,b) => b.total - a.total)[0];
   document.getElementById('kpi-peak-val').textContent = fmt(peak.total);
@@ -345,15 +571,12 @@ function renderKPIs() {
   if (prev && prev.total > 0) {
     const pct = ((last.total - prev.total) / prev.total * 100).toFixed(1);
     const el  = document.getElementById('kpi-tend');
-    el.textContent = pct < 0
-      ? `↘ ${Math.abs(pct)}% vs ${prev.ano}`
-      : `↗ ${pct}% vs ${prev.ano}`;
-    el.className = pct < 0 ? 'kpi-trend down' : 'kpi-trend up';
+    el.textContent = pct < 0 ? `↘ ${Math.abs(pct)}% vs ${prev.ano}` : `↗ ${pct}% vs ${prev.ano}`;
+    el.className   = pct < 0 ? 'kpi-trend down' : 'kpi-trend up';
   }
 
   document.getElementById('kpi-actual').textContent     = fmt(act.total) || '0';
-  document.getElementById('kpi-actual-sub').textContent =
-    `dosis en ${act.ano}${act.en_curso ? ' (en curso)' : ''}`;
+  document.getElementById('kpi-actual-sub').textContent = `dosis en ${act.ano}${act.en_curso ? ' (en curso)' : ''}`;
 
   if (act.total === 0 && act.en_curso) {
     document.getElementById('alert-strip').style.display = 'flex';
@@ -361,8 +584,7 @@ function renderKPIs() {
       `Sin datos registrados para ${act.ano}. Actualiza la hoja ACTUAL del Excel y ejecuta generar_json.py`;
   }
 
-  document.getElementById('datos-hasta').textContent =
-    act.ultima_actualizacion || DATA.meta.generado || '—';
+  document.getElementById('datos-hasta').textContent   = act.ultima_actualizacion || DATA.meta.generado || '—';
   document.getElementById('footer-update').textContent = DATA.meta.generado || '—';
 }
 
@@ -421,8 +643,7 @@ function renderChartAnual() {
     type:'bar',
     data:{
       labels: todos.map(d => d.ano),
-      datasets:[{ label:'Dosis administradas',
-        data:  todos.map(d => d.total),
+      datasets:[{ label:'Dosis administradas', data: todos.map(d => d.total),
         backgroundColor: todos.map(d => d.en_curso ? 'rgba(155,114,255,.7)' : 'rgba(0,201,167,.7)'),
         borderColor:     todos.map(d => d.en_curso ? '#9B72FF' : '#00C9A7'),
         borderWidth:2, borderRadius:6 }]
@@ -451,8 +672,7 @@ function renderChartVacuna() {
   const ctx    = document.getElementById('chartVacuna').getContext('2d');
   charts.vacuna = new Chart(ctx, {
     type:'doughnut',
-    data:{ labels, datasets:[{ data:vals, backgroundColor:colors.map(c=>c+'CC'),
-      borderColor:colors, borderWidth:2, hoverOffset:8 }] },
+    data:{ labels, datasets:[{ data:vals, backgroundColor:colors.map(c=>c+'CC'), borderColor:colors, borderWidth:2, hoverOffset:8 }] },
     options:{ responsive:true, cutout:'62%',
       plugins:{ legend:{ position:'bottom', labels:{ color:'#8BAAC8', font:{ family:'JetBrains Mono', size:11 }, boxWidth:12, padding:12 } },
         tooltip:{ backgroundColor:'#111D2E', borderColor:'rgba(0,201,167,.2)', borderWidth:1,
@@ -509,40 +729,281 @@ function renderChartStack() {
 }
 
 /* ============================================================
-   TABLA
+   TABLA DETALLE
 ============================================================ */
 function renderTabla(filtro = 'todos') {
-  const tbody   = document.getElementById('tabla-body');
+  const tbody = document.getElementById('tabla-body');
   tbody.innerHTML = '';
-  const todos   = [...datosHistoricos(), datoActual()];
-  const sel     = filtro === 'todos'
-    ? todos
-    : todos.filter(d => String(d.ano) === String(filtro));
+  const todos = [...datosHistoricos(), datoActual()];
+  const sel   = filtro === 'todos' ? todos : todos.filter(d => String(d.ano) === String(filtro));
 
   if (!sel.length) {
     tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:var(--text3);padding:24px">Sin datos para este filtro</td></tr>';
     return;
   }
-
   sel.forEach(d => {
     Object.entries(d.por_vacuna).forEach(([vac, info], idx) => {
-      const tr     = document.createElement('tr');
-      const badge  = idx === 0 ? `<span class="year-badge">${d.ano}${d.en_curso?' ★':''}</span>` : '';
-      const dot    = VAC_COLORS[vac] ? `<span class="vac-dot" style="background:${VAC_COLORS[vac]}"></span>` : '';
-      const meses  = info.meses.map(m => `<td class="num">${m > 0 ? fmt(m) : '—'}</td>`).join('');
+      const tr    = document.createElement('tr');
+      const badge = idx === 0 ? `<span class="year-badge">${d.ano}${d.en_curso?' ★':''}</span>` : '';
+      const dot   = VAC_COLORS[vac] ? `<span class="vac-dot" style="background:${VAC_COLORS[vac]}"></span>` : '';
+      const meses = info.meses.map(m => `<td class="num">${m > 0 ? fmt(m) : '—'}</td>`).join('');
       tr.innerHTML = `<td>${badge}</td><td><span class="vac-tag">${dot}${vac}</span></td><td class="num">${fmt(info.total)}</td>${meses}`;
       tbody.appendChild(tr);
     });
-    const trT     = document.createElement('tr');
+    const trT = document.createElement('tr');
     trT.className = 'total-row';
-    const mT      = d.totales_mensuales.map(m => `<td class="num">${m > 0 ? fmt(m) : '—'}</td>`).join('');
+    const mT  = d.totales_mensuales.map(m => `<td class="num">${m > 0 ? fmt(m) : '—'}</td>`).join('');
     trT.innerHTML = `<td></td><td><span class="vac-tag">TOTAL AÑO</span></td><td class="num">${fmt(d.total)}</td>${mT}`;
     tbody.appendChild(trT);
   });
 }
 
 /* ============================================================
-   INIT — intenta cargar data/datos.json externo; si no, usa DATA
+   RESUMEN EJECUTIVO
+============================================================ */
+function renderEjecutivo() {
+  renderHighlights();
+  renderTablaEjecutiva();
+  renderNotas();
+}
+
+function renderHighlights() {
+  const hist = datosHistoricos();
+  const act  = datoActual();
+  const total = DATA.meta.total_historico;
+
+  // Peak year
+  const peak = [...hist].sort((a,b) => b.total - a.total)[0];
+
+  // Vacuna más usada en toda la historia
+  const totByVac = {};
+  hist.forEach(d => Object.entries(d.por_vacuna).forEach(([v,i]) => {
+    totByVac[v] = (totByVac[v]||0) + i.total;
+  }));
+  const vacTop = Object.entries(totByVac).sort((a,b) => b[1]-a[1])[0];
+
+  // Mes con más dosis (global)
+  const mesTotales = Array(12).fill(0);
+  hist.forEach(d => d.totales_mensuales.forEach((m,i) => mesTotales[i] += m));
+  const mesPeakIdx = mesTotales.indexOf(Math.max(...mesTotales));
+
+  // Caída de 2021 a último
+  const last = hist[hist.length-1];
+  const caida = (((last.total - peak.total) / peak.total) * 100).toFixed(0);
+
+  const cards = [
+    { icon:'💉', cls:'hi-teal',   title:`${fmt(total)} dosis históricas`,
+      desc:`Dosis administradas en Ñuble entre 2021 y ${last.ano} en la campaña COVID-19.` },
+    { icon:'🏆', cls:'hi-amber',  title:`${peak.ano} fue el año peak`,
+      desc:`Con ${fmt(peak.total)} dosis, concentró el ${((peak.total/total)*100).toFixed(1)}% del total histórico.` },
+    { icon:'💊', cls:'hi-blue',   title:`${vacTop[0]} lidera el histórico`,
+      desc:`Con ${fmt(vacTop[1])} dosis (${((vacTop[1]/total)*100).toFixed(1)}% del total), es la vacuna más administrada.` },
+    { icon:'📅', cls:'hi-purple', title:`${MESES_FULL[mesPeakIdx]}, el mes más activo`,
+      desc:`Es el mes con mayor volumen acumulado entre todos los años de campaña.` },
+    { icon:'📉', cls:'hi-coral',  title:`Tendencia marcada a la baja`,
+      desc:`De ${fmt(peak.total)} dosis en ${peak.ano} a ${fmt(last.total)} en ${last.ano} (${caida}% de caída).` },
+  ];
+
+  const container = document.getElementById('exec-highlights');
+  container.innerHTML = cards.map(c => `
+    <div class="highlight-card">
+      <div class="highlight-icon ${c.cls}">${c.icon}</div>
+      <div class="highlight-body">
+        <h3>${c.title}</h3>
+        <p>${c.desc}</p>
+      </div>
+    </div>`).join('');
+}
+
+function renderTablaEjecutiva() {
+  const tbody = document.getElementById('tbody-ejecutiva');
+  tbody.innerHTML = '';
+  const todos = [...datosHistoricos(), datoActual()];
+
+  todos.forEach((d, idx) => {
+    const tr  = document.createElement('tr');
+    const prev = todos[idx - 1];
+
+    // Variación YoY
+    let varHtml = '<span class="var-neu">—</span>';
+    if (prev && prev.total > 0) {
+      const pct = ((d.total - prev.total) / prev.total * 100).toFixed(1);
+      varHtml = pct < 0
+        ? `<span class="var-neg">↘ ${Math.abs(pct)}%</span>`
+        : `<span class="var-pos">↗ ${pct}%</span>`;
+    }
+
+    // Mes pico
+    const maxVal = Math.max(...d.totales_mensuales);
+    const maxIdx = d.totales_mensuales.indexOf(maxVal);
+    const mesPico = maxVal > 0 ? `${MESES_CORTOS[maxIdx]}` : '—';
+    const dosisPico = maxVal > 0 ? fmt(maxVal) : '—';
+
+    // Vacunas activas
+    const vacs = Object.keys(d.por_vacuna).join(' · ');
+
+    // Mini sparkbar
+    const maxBar = Math.max(...d.totales_mensuales, 1);
+    const bars = d.totales_mensuales.map(m => {
+      const h = Math.max(2, Math.round((m / maxBar) * 22));
+      const col = d.en_curso ? '#9B72FF' : '#00C9A7';
+      return `<div class="mes-bar" style="height:${h}px;background:${col}" title="${fmt(m)}"></div>`;
+    }).join('');
+
+    // Estado badge
+    const estadoHtml = d.en_curso
+      ? '<span class="badge-activo">En curso</span>'
+      : '<span class="badge-cerrado">Cerrado</span>';
+
+    tr.innerHTML = `
+      <td><span class="year-badge">${d.ano}</span></td>
+      <td class="num" style="font-weight:700">${fmt(d.total)}</td>
+      <td style="font-size:11px;color:var(--text2)">${vacs}</td>
+      <td style="font-family:var(--mono);font-size:12px">${mesPico}</td>
+      <td class="num" style="font-size:12px">${dosisPico}</td>
+      <td style="text-align:right">${varHtml}</td>
+      <td style="text-align:center"><div class="mes-bar-wrap" style="justify-content:center">${bars}</div></td>
+      <td style="text-align:center">${estadoHtml}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderNotas() {
+  const hist  = datosHistoricos();
+  const act   = datoActual();
+  const total = DATA.meta.total_historico;
+  const peak  = [...hist].sort((a,b) => b.total-a.total)[0];
+  const last  = hist[hist.length-1];
+
+  // Caída acumulada desde peak
+  const caidaPct = (((last.total-peak.total)/peak.total)*100).toFixed(1);
+
+  // Años con solo Pfizer+Moderna
+  const modernos = hist.filter(d =>
+    Object.keys(d.por_vacuna).every(v => ['PFIZER','MODERNA'].includes(v))
+  );
+
+  const notas = [
+    `La campaña COVID-19 en Ñuble registra <strong>${fmt(total)}</strong> dosis históricas entre 2021 y ${last.ano}, distribuidas en 6 tipos de vacunas distintas.`,
+    `El año ${peak.ano} concentró la mayor actividad con <strong>${fmt(peak.total)}</strong> dosis, coincidiendo con la fase más activa de la pandemia y el inicio masivo de vacunación.`,
+    `Desde ${peak.ano}, la campaña muestra una caída sostenida. En ${last.ano} se administraron <strong>${fmt(last.total)}</strong> dosis, representando una reducción de <strong>${Math.abs(caidaPct)}%</strong> respecto al año peak.`,
+    `A partir de ${modernos[0]?.ano || 2024}, la campaña se simplifica a dos vacunas (Pfizer y Moderna), consolidando la oferta disponible para la población objetivo.`,
+    `El año ${act.ano} se encuentra en curso${act.total > 0 ? ` con ${fmt(act.total)} dosis registradas a la fecha` : ', sin datos registrados aún'}. Se espera actividad principalmente en el primer semestre.`,
+    `Los meses de mayor vacunación histórica corresponden al primer semestre, con picos en Marzo–Mayo, período que coincide con las campañas de refuerzo anuales.`,
+  ];
+
+  const container = document.getElementById('exec-notas');
+  container.innerHTML = `
+    <h3>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--teal)">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      Análisis de la campaña
+    </h3>
+    <ul>${notas.map(n => `<li>${n}</li>`).join('')}</ul>`;
+}
+
+/* ============================================================
+   EXPORT — EXCEL
+============================================================ */
+function exportExcel() {
+  const hist  = datosHistoricos();
+  const act   = datoActual();
+  const todos = [...hist, act];
+  const wb    = XLSX.utils.book_new();
+
+  /* Hoja 1: Resumen por año */
+  const resumenRows = [
+    ['Año','Total Dosis','Estado','Mes Pico','Dosis Pico','Var. vs Ant.%',
+     'Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+  ];
+  todos.forEach((d, idx) => {
+    const prev   = todos[idx-1];
+    const maxV   = Math.max(...d.totales_mensuales);
+    const maxI   = d.totales_mensuales.indexOf(maxV);
+    const varPct = prev && prev.total > 0
+      ? ((d.total-prev.total)/prev.total*100).toFixed(1) : '';
+    resumenRows.push([
+      d.ano, d.total, d.en_curso ? 'En curso' : 'Cerrado',
+      maxV > 0 ? MESES_FULL[maxI] : '', maxV > 0 ? maxV : '',
+      varPct, ...d.totales_mensuales
+    ]);
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumenRows), 'Resumen Anual');
+
+  /* Hoja 2: Detalle por vacuna */
+  const detalleRows = [['Año','Vacuna','Total',...MESES_CORTOS]];
+  todos.forEach(d => {
+    Object.entries(d.por_vacuna).forEach(([vac, info]) => {
+      detalleRows.push([d.ano, vac, info.total, ...info.meses]);
+    });
+    detalleRows.push([d.ano, 'TOTAL AÑO', d.total, ...d.totales_mensuales]);
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(detalleRows), 'Detalle por Vacuna');
+
+  /* Hoja 3: Meta */
+  const metaRows = [
+    ['Campo','Valor'],
+    ['Descripción',  DATA.meta.descripcion],
+    ['Generado',     DATA.meta.generado],
+    ['Total histórico', DATA.meta.total_historico],
+    ['Vacunas disponibles', DATA.meta.vacunas_disponibles.join(', ')],
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(metaRows), 'Metadatos');
+
+  XLSX.writeFile(wb, `COVID19_Vacunacion_Nuble_${DATA.meta.generado}.xlsx`);
+}
+
+/* ============================================================
+   EXPORT — PDF
+============================================================ */
+function exportPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+  const hist  = datosHistoricos();
+  const act   = datoActual();
+  const todos = [...hist, act];
+
+  // Título
+  doc.setFontSize(16); doc.setTextColor(0,201,167);
+  doc.text('Vacunación COVID-19 · Región de Ñuble', 14, 16);
+  doc.setFontSize(9); doc.setTextColor(100);
+  doc.text(`Generado: ${DATA.meta.generado}  |  Total histórico: ${fmtRaw(DATA.meta.total_historico)} dosis`, 14, 22);
+
+  // Tabla resumen ejecutivo
+  const head = [['Año','Total Dosis','Estado','Mes Pico','Dosis Pico','Var. %',
+                  'Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']];
+  const body = todos.map((d, idx) => {
+    const prev   = todos[idx-1];
+    const maxV   = Math.max(...d.totales_mensuales);
+    const maxI   = d.totales_mensuales.indexOf(maxV);
+    const varPct = prev && prev.total > 0
+      ? `${((d.total-prev.total)/prev.total*100).toFixed(1)}%` : '—';
+    return [
+      d.ano, fmtRaw(d.total), d.en_curso ? 'En curso' : 'Cerrado',
+      maxV > 0 ? MESES_CORTOS[maxI] : '—', maxV > 0 ? fmtRaw(maxV) : '—',
+      varPct, ...d.totales_mensuales.map(m => m > 0 ? fmtRaw(m) : '—')
+    ];
+  });
+
+  doc.autoTable({
+    startY: 28, head, body,
+    styles: { fontSize:7, cellPadding:2, font:'helvetica' },
+    headStyles: { fillColor:[0,100,90], textColor:255, fontStyle:'bold' },
+    alternateRowStyles: { fillColor:[240,248,255] },
+    margin: { left:14, right:14 }
+  });
+
+  // Línea de pie
+  const pgH = doc.internal.pageSize.height;
+  doc.setFontSize(7); doc.setTextColor(150);
+  doc.text(`Autor: Rodrigo Villalobos R. · rodrigo.villalobos@redsalud.gov.cl · Fuente: Consolidado_COVID.xlsx`, 14, pgH - 8);
+
+  doc.save(`COVID19_Vacunacion_Nuble_${DATA.meta.generado}.pdf`);
+}
+
+/* ============================================================
+   RENDER ALL
 ============================================================ */
 function renderAll() {
   renderKPIs();
@@ -552,12 +1013,15 @@ function renderAll() {
   renderChartMensual();
   renderChartStack();
   renderTabla();
+  renderEjecutivo();
 }
 
+/* ============================================================
+   INIT
+============================================================ */
 (function init() {
   updateClock();
   setInterval(updateClock, 1000);
-
   fetch('data/datos.json')
     .then(r => r.ok ? r.json() : null)
     .catch(() => null)
