@@ -1,0 +1,62 @@
+{
+  "meta": {
+    "ano": 2026,
+    "ultima_actualizacion": "2026-03-19",
+    "descripcion": "Campaña Vacunación COVID-19 — Año en curso"
+  },
+  "total": 0,
+  "vacunas": [
+    "MODERNA",
+    "PFIZER"
+  ],
+  "por_vacuna": {
+    "MODERNA": {
+      "total": 0,
+      "meses": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "PFIZER": {
+      "total": 0,
+      "meses": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  },
+  "totales_mensuales": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ]
+}
