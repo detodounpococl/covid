@@ -66,7 +66,7 @@
       "total": 0,
       "ultima_actualizacion": "2026-03-19",
       "por_vacuna": {
-        "MODERNA": { "total": 0, "meses": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+        "MODERNA": { "total": 7, "meses": [2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
         "PFIZER":  { "total": 0, "meses": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }
       },
       "totales_mensuales": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
