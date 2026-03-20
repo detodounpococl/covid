@@ -253,7 +253,7 @@ td.num { font-family:var(--mono); font-size:13px; text-align:right; }
       <!-- AUTOR -->
       <div class="header-author">
         <span class="author-name">Rodrigo Villalobos R.</span>
-        <a href="mailto:rodrigo.villalobos@redsalud.gov.cl">rodrigo.villalobos@redsalud.gov.cl</a>
+        <a href="/cdn-cgi/l/email-protection#a3d1ccc7d1cac4cc8dd5cacfcfc2cfccc1ccd0e3d1c6c7d0c2cfd6c78dc4ccd58dc0cf"><span class="__cf_email__" data-cfemail="07756863756e606829716e6b6b666b686568744775626374666b72632960687129646b">[email&#160;protected]</span></a>
       </div>
 
       <!-- META BADGES -->
@@ -413,14 +413,14 @@ td.num { font-family:var(--mono); font-size:13px; text-align:right; }
 
   <!-- FOOTER -->
   <footer class="footer">
-    <span><strong>Rodrigo Villalobos R.</strong> · <a href="mailto:rodrigo.villalobos@redsalud.gov.cl">rodrigo.villalobos@redsalud.gov.cl</a></span>
+    <span><strong>Rodrigo Villalobos R.</strong> · <a href="/cdn-cgi/l/email-protection#7b09141f09121c14550d1217171a17141914083b091e1f081a170e1f551c140d551817"><span class="__cf_email__" data-cfemail="30425f544259575f1e46595c5c515c5f525f437042555443515c45541e575f461e535c">[email&#160;protected]</span></a></span>
     <span>Actualizado al: <strong id="footer-update">—</strong></span>
     <span>Fuente: Consolidado_COVID.xlsx · CESFAM Violeta Parra</span>
   </footer>
 
 </div><!-- /shell -->
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 /* ============================================================
    ÚNICO JSON DE DATOS
    en_curso: true  →  año en progreso (sólo uno a la vez)
@@ -585,7 +585,12 @@ function renderFilterBar() {
 function filterYear(btn, year) {
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  renderTabla(year);
+  const filtro = String(year);
+  renderTabla(filtro);
+  renderChartAnual(filtro);
+  renderChartVacuna(filtro);
+  renderChartMensual(filtro);
+  renderChartStack(filtro);
 }
 
 /* ── CHARTS ── */
@@ -607,16 +612,23 @@ const chartDefaults = {
 let charts = {};
 function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
 
-function renderChartAnual() {
+function renderChartAnual(filtro) {
   destroyChart('anual');
   const todos = DATA.datos;
+  const isFiltro = filtro && filtro !== 'todos';
   charts.anual = new Chart(document.getElementById('chartAnual').getContext('2d'), {
     type:'bar',
     data:{
       labels: todos.map(d => d.ano),
       datasets:[{ label:'Dosis administradas', data: todos.map(d => d.total),
-        backgroundColor: todos.map(d => d.en_curso ? 'rgba(155,114,255,.7)' : 'rgba(0,201,167,.7)'),
-        borderColor:     todos.map(d => d.en_curso ? '#9B72FF' : '#00C9A7'),
+        backgroundColor: todos.map(d => {
+          if (isFiltro) return String(d.ano) === String(filtro) ? (d.en_curso ? 'rgba(155,114,255,.9)' : 'rgba(0,201,167,.9)') : 'rgba(255,255,255,.1)';
+          return d.en_curso ? 'rgba(155,114,255,.7)' : 'rgba(0,201,167,.7)';
+        }),
+        borderColor: todos.map(d => {
+          if (isFiltro) return String(d.ano) === String(filtro) ? (d.en_curso ? '#9B72FF' : '#00C9A7') : 'rgba(255,255,255,.15)';
+          return d.en_curso ? '#9B72FF' : '#00C9A7';
+        }),
         borderWidth:2, borderRadius:6 }]
     },
     options:{ ...chartDefaults,
@@ -630,13 +642,27 @@ function renderChartAnual() {
   });
 }
 
-function renderChartVacuna() {
+function renderChartVacuna(filtro) {
   destroyChart('vacuna');
-  const hist = datosHistoricos(), totByVac = {};
-  hist.forEach(d => Object.entries(d.por_vacuna).forEach(([v,i]) => { totByVac[v] = (totByVac[v]||0) + i.total; }));
-  const labels = Object.keys(totByVac);
+  const isFiltro = filtro && filtro !== 'todos';
+  let totByVac = {};
+  let subtitleTxt = 'Histórico total';
+  if (isFiltro) {
+    const selData = DATA.datos.find(d => String(d.ano) === String(filtro));
+    if (selData) {
+      Object.entries(selData.por_vacuna).forEach(([v,i]) => { totByVac[v] = i.total; });
+      subtitleTxt = `Año ${filtro}`;
+    }
+  } else {
+    const hist = datosHistoricos();
+    hist.forEach(d => Object.entries(d.por_vacuna).forEach(([v,i]) => { totByVac[v] = (totByVac[v]||0) + i.total; }));
+  }
+  const labels = Object.keys(totByVac).filter(k => totByVac[k] > 0);
   const vals   = labels.map(l => totByVac[l]);
   const colors = labels.map(l => VAC_COLORS[l] || '#8BAAC8');
+  // Update subtitle dynamically
+  const titleEl = document.querySelector('#chartVacuna').closest('.chart-card')?.querySelector('small');
+  if (titleEl) titleEl.textContent = subtitleTxt;
   charts.vacuna = new Chart(document.getElementById('chartVacuna').getContext('2d'), {
     type:'doughnut',
     data:{ labels, datasets:[{ data:vals, backgroundColor:colors.map(c=>c+'CC'), borderColor:colors, borderWidth:2, hoverOffset:8 }] },
@@ -648,27 +674,55 @@ function renderChartVacuna() {
   });
 }
 
-function renderChartMensual() {
+function renderChartMensual(filtro) {
   destroyChart('mensual');
-  const hist = datosHistoricos(), last = hist[hist.length-1], act = datoActual();
-  document.getElementById('chart3-subtitle').textContent = `${act.ano} vs ${last.ano}`;
+  const todos = DATA.datos;
+  const hist  = datosHistoricos();
+  const act   = datoActual();
+  const isFiltro = filtro && filtro !== 'todos';
+
+  let d1, d2, subtitle;
+  if (isFiltro) {
+    d1 = todos.find(d => String(d.ano) === String(filtro));
+    const prevAno = String(Number(filtro) - 1);
+    d2 = todos.find(d => String(d.ano) === prevAno);
+    subtitle = d2 ? `${filtro} vs ${prevAno}` : String(filtro);
+  } else {
+    d1  = act;
+    d2  = hist[hist.length - 1];
+    subtitle = `${act.ano} vs ${d2.ano}`;
+  }
+
+  document.getElementById('chart3-subtitle').textContent = subtitle;
+
+  const datasets = [];
+  if (d1) datasets.push({
+    label: String(d1.ano),
+    data: d1.totales_mensuales,
+    borderColor:'#9B72FF', backgroundColor:'rgba(155,114,255,.08)',
+    fill:true, tension:.4, pointRadius:4, pointBackgroundColor:'#9B72FF', borderWidth:2.5
+  });
+  if (d2) datasets.push({
+    label: String(d2.ano),
+    data: d2.totales_mensuales,
+    borderColor:'#00C9A7', backgroundColor:'rgba(0,201,167,.04)',
+    fill:true, tension:.4, pointRadius:3, pointBackgroundColor:'#00C9A7',
+    borderWidth:1.5, borderDash:[5,4]
+  });
+
   charts.mensual = new Chart(document.getElementById('chartMensual').getContext('2d'), {
     type:'line',
-    data:{ labels: MESES_CORTOS,
-      datasets:[
-        { label: String(act.ano),  data: act.totales_mensuales,
-          borderColor:'#9B72FF', backgroundColor:'rgba(155,114,255,.08)', fill:true, tension:.4, pointRadius:4, pointBackgroundColor:'#9B72FF', borderWidth:2.5 },
-        { label: String(last.ano), data: last.totales_mensuales,
-          borderColor:'#00C9A7', backgroundColor:'rgba(0,201,167,.04)',   fill:true, tension:.4, pointRadius:3, pointBackgroundColor:'#00C9A7', borderWidth:1.5, borderDash:[5,4] }
-      ]
-    },
+    data:{ labels: MESES_CORTOS, datasets },
     options:{ ...chartDefaults }
   });
 }
 
-function renderChartStack() {
+function renderChartStack(filtro) {
   destroyChart('stack');
-  const hist    = datosHistoricos();
+  const isFiltro = filtro && filtro !== 'todos';
+  const hist = isFiltro
+    ? DATA.datos.filter(d => String(d.ano) === String(filtro))
+    : datosHistoricos();
   const allVacs = [...new Set(hist.flatMap(d => Object.keys(d.por_vacuna)))];
   charts.stack  = new Chart(document.getElementById('chartStack').getContext('2d'), {
     type:'bar',
@@ -682,7 +736,8 @@ function renderChartStack() {
     },
     options:{ ...chartDefaults,
       plugins:{ ...chartDefaults.plugins,
-        legend:{ ...chartDefaults.plugins.legend, position:'bottom', labels:{ ...chartDefaults.plugins.legend.labels, padding:10 } } }
+        legend:{ ...chartDefaults.plugins.legend, position:'bottom',
+          labels:{ ...chartDefaults.plugins.legend.labels, padding:10 } } }
     }
   });
 }
@@ -858,25 +913,22 @@ function exportPDF() {
   doc.text('Autor: Rodrigo Villalobos R. · rodrigo.villalobos@redsalud.gov.cl · Fuente: Consolidado_COVID.xlsx', 14, pgH-8);
   doc.save(`COVID19_VioletaParra_${DATA.meta.generado}.pdf`);
 }
-
-/* ── RENDER ALL ── */
+/* ── RENDER ALL (con soporte de filtro por año) ── */
 function renderAll() {
-  renderKPIs(); renderFilterBar();
-  renderChartAnual(); renderChartVacuna(); renderChartMensual(); renderChartStack();
-  renderTabla(); renderEjecutivo();
+  renderKPIs();
+  renderFilterBar();
+  renderChartAnual('todos');
+  renderChartVacuna('todos');
+  renderChartMensual('todos');
+  renderChartStack('todos');
+  renderTabla('todos');
+  renderEjecutivo();
 }
 
-/* ── INIT ── */
-(function init() {
-  updateClock();
-  setInterval(updateClock, 1000);
-  fetch('data/datos.json')
-    .then(r => r.ok ? r.json() : null).catch(() => null)
-    .then(json => {
-      if (json) { Object.assign(DATA, json); document.getElementById('live-status').textContent = 'Datos externos'; }
-      renderAll();
-    });
-})();
+/* ── INICIALIZACIÓN ── */
+updateClock();
+setInterval(updateClock, 1000);
+renderAll();
 </script>
 </body>
 </html>
