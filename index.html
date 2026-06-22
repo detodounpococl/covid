@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Dashboard Ejecutivo COVID · Toma de Decisiones</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#06111f; --bg2:#0b1728; --panel:#0f1d33; --panel2:#13243d; --soft:#1b3353;
+  --line:rgba(255,255,255,.08); --txt:#eaf2ff; --muted:#9db3d3; --cyan:#22d3ee; --blue:#3b82f6;
+  --green:#10b981; --amber:#f59e0b; --red:#ef4444; --violet:#8b5cf6;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:linear-gradient(180deg,var(--bg),#081424 60%,#09111d);color:var(--txt);font-family:Segoe UI,Arial,sans-serif}
+.header{
+  padding:18px 22px;border-bottom:1px solid var(--line);
+  background:linear-gradient(135deg,#0a1830,#0c2f52 45%,#10213a);
+  display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;align-items:center
+}
+.brand{display:flex;gap:14px;align-items:center}
+.logo{
+  width:54px;height:54px;border-radius:16px;display:grid;place-items:center;color:#fff;font-weight:800;
+  background:linear-gradient(135deg,var(--cyan),var(--blue));box-shadow:0 14px 30px rgba(37,99,235,.28)
+}
+h1{margin:0;font-size:24px}
+.sub{margin-top:5px;color:#b9d0f0;font-size:13px}
+.meta{font-size:12px;color:#cfe2ff;text-align:right;line-height:1.5}
+.badges{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-bottom:8px}
+.badge{
+  padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.1);
+  background:rgba(15,23,42,.6);color:#c9ddff;font-weight:600
+}
+.badge.primary{background:linear-gradient(135deg,#0891b2,#2563eb);color:#fff;border:none}
+.toolbar{
+  display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:14px 22px;
+  background:#0a1628;border-bottom:1px solid var(--line)
+}
+button,select,input{
+  font:inherit;border-radius:12px;padding:10px 12px;border:1px solid rgba(255,255,255,.12);
+  background:#0d1a2b;color:var(--txt)
+}
+button{cursor:pointer}
+button:hover{filter:brightness(1.06)}
+button.primary{background:linear-gradient(135deg,#0ea5e9,#2563eb);border:none}
+button.success{background:linear-gradient(135deg,#059669,#10b981);border:none}
+button.warn{background:linear-gradient(135deg,#d97706,#f59e0b);border:none}
+.wrap{padding:18px 22px 30px}
+.grid-kpi{display:grid;grid-template-columns:repeat(4,minmax(170px,1fr));gap:14px;margin-bottom:16px}
+.card{
+  background:linear-gradient(180deg,var(--panel),var(--panel2));
+  border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 10px 24px rgba(0,0,0,.18)
+}
+.kpi .label{font-size:12px;color:#bdd1ef;text-transform:uppercase;letter-spacing:.08em}
+.kpi .value{font-size:30px;font-weight:800;margin-top:8px}
+.kpi .hint{margin-top:6px;font-size:12px;color:var(--muted)}
+.grid-main{display:grid;grid-template-columns:1.35fr .95fr;gap:16px}
+.grid-sub{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
+.grid-bottom{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.title{font-size:15px;font-weight:800;margin:0 0 10px 0}
+.mini{color:var(--muted);font-size:12px}
+.canvas-wrap{height:350px}
+.table-wrap{overflow:auto;max-height:400px;border-radius:12px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px 10px;border-bottom:1px solid rgba(255,255,255,.06);font-size:13px;text-align:left}
+th{position:sticky;top:0;background:#10213a;z-index:1}
+td.num,th.num{text-align:right}
+.status{
+  display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border-radius:999px;font-size:12px;font-weight:700
+}
+.s-ok{background:rgba(16,185,129,.12);color:#93f1c5}
+.s-mid{background:rgba(245,158,11,.12);color:#ffd28a}
+.s-bad{background:rgba(239,68,68,.12);color:#ffb0b0}
+.note{font-size:12px;color:#bfd1ed;line-height:1.55}
+.year-pills,.manual-years{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.year-pill{
+  padding:8px 10px;border-radius:999px;background:#0f2036;border:1px solid rgba(255,255,255,.09);cursor:pointer;font-size:12px
+}
+.year-pill.active{background:linear-gradient(135deg,#0891b2,#2563eb);border:none}
+.footer{margin-top:16px;font-size:12px;color:#9cb4d7}
+.hidden{display:none!important}
+@media (max-width:1150px){
+  .grid-main,.grid-bottom,.grid-sub{grid-template-columns:1fr}
+  .grid-kpi{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:700px){
+  .grid-kpi{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      <div class="logo">CV</div>
+      <div>
+        <h1>Dashboard Ejecutivo COVID</h1>
+        <div class="sub">Toma de decisiones para directores de CESFAM, servicios de salud y nivel ministerial</div>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="badges">
+        <div class="badge primary">Carga automática en GitHub</div>
+        <div class="badge">Actualización local por JSON con clave</div>
+        <div class="badge">Acumulado por defecto + selección de 1, 2 o 3 años</div>
+      </div>
+      <div id="metaInfo">Sin datos cargados</div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <button class="success" id="btnAuto">Cargar COVID automáticamente</button>
+    <button class="warn" id="btnManual">Actualizar JSON (clave)</button>
+    <input type="file" id="fileJson" accept=".json,application/json" class="hidden">
+
+    <select id="cmpMode">
+      <option value="todos" selected>Ver todos los años disponibles</option>
+      <option value="2">Comparar últimos 2 años</option>
+      <option value="3">Comparar últimos 3 años</option>
+      <option value="manual">Elegir 1, 2 o 3 años</option>
+    </select>
+
+    <div class="manual-years hidden" id="manualYears"></div>
+
+    <select id="vaccineFilter"></select>
+
+    <select id="viewMode">
+      <option value="acumulado" selected>Vista acumulada</option>
+      <option value="mensual">Vista mensual</option>
+    </select>
+  </div>
+
+  <div class="wrap">
+    <div class="grid-kpi">
+      <div class="card kpi">
+        <div class="label">Total período visible</div>
+        <div class="value" id="kpiTotal">-</div>
+        <div class="hint" id="kpiTotalHint">-</div>
+      </div>
+      <div class="card kpi">
+        <div class="label">Año líder</div>
+        <div class="value" id="kpiLeader">-</div>
+        <div class="hint" id="kpiLeaderHint">-</div>
+      </div>
+      <div class="card kpi">
+        <div class="label">Variación último año</div>
+        <div class="value" id="kpiVar">-</div>
+        <div class="hint" id="kpiVarHint">-</div>
+      </div>
+      <div class="card kpi">
+        <div class="label">Vacuna líder</div>
+        <div class="value" id="kpiVac">-</div>
+        <div class="hint" id="kpiVacHint">-</div>
+      </div>
+    </div>
+
+    <div class="grid-main">
+      <div class="card">
+        <h3 class="title">Comparación anual por mes</h3>
+        <div class="mini">Permite revisar el acumulado por defecto y comparar todos los años o elegir 1, 2 o 3 años para detectar adelanto, rezago o recuperación de la campaña.</div>
+        <div class="canvas-wrap"><canvas id="chartYears"></canvas></div>
+      </div>
+
+      <div class="card">
+        <h3 class="title">Semáforo ejecutivo</h3>
+        <div id="alerts"></div>
+      </div>
+    </div>
+
+    <div class="grid-sub">
+      <div class="card">
+        <h3 class="title">Composición por vacuna</h3>
+        <div class="canvas-wrap" style="height:280px"><canvas id="chartVaccines"></canvas></div>
+      </div>
+      <div class="card">
+        <h3 class="title">Ranking anual</h3>
+        <div class="table-wrap"><table id="tblYears"></table></div>
+      </div>
+      <div class="card">
+        <h3 class="title">Lectura directiva</h3>
+        <div id="insights" class="note"></div>
+      </div>
+    </div>
+
+    <div class="grid-bottom">
+      <div class="card">
+        <h3 class="title">Meses con mayor aporte</h3>
+        <div class="table-wrap"><table id="tblMonths"></table></div>
+      </div>
+      <div class="card">
+        <h3 class="title">Uso sugerido para gestión</h3>
+        <div class="note" id="decisionUse"></div>
+      </div>
+    </div>
+
+    <div class="footer" id="footerNote"></div>
+  </div>
+
+<script>
+const MONTHS = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+const MONTH_LABELS = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+let DATA = [];
+let chartYears = null;
+let chartVaccines = null;
+
+const el = id => document.getElementById(id);
+const fmt = n => Number(n || 0).toLocaleString("es-CL");
+const pct = n => (n>0?"+":"") + Number(n || 0).toLocaleString("es-CL",{minimumFractionDigits:1,maximumFractionDigits:1}) + "%";
+
+function normalizeData(rows){
+  return (rows || []).map(r => {
+    const obj = {};
+    Object.keys(r || {}).forEach(k => obj[String(k).trim().toLowerCase()] = r[k]);
+    const out = {
+      anio: Number(obj.anio || obj.año || 0),
+      vacuna: String(obj.vacuna || "SIN DEFINIR").trim(),
+      total: Number(obj.total || 0)
+    };
+    MONTHS.forEach(m => out[m] = Number(obj[m] || 0));
+    return out;
+  }).filter(r => r.anio && r.vacuna);
+}
+
+function uniqueYears(rows){
+  return [...new Set(rows.map(r => r.anio))].sort((a,b) => a-b);
+}
+
+function uniqueVaccines(rows){
+  return [...new Set(rows.map(r => r.vacuna))].sort();
+}
+
+function selectedYears(){
+  const years = uniqueYears(DATA);
+  const mode = el("cmpMode").value;
+  if(mode === "todos") return years;
+  if(mode === "2") return years.slice(-2);
+  if(mode === "3") return years.slice(-3);
+  const checked = [...document.querySelectorAll(".year-pill.active")].map(x => Number(x.dataset.year)).sort((a,b)=>a-b);
+  return checked.length ? checked : (years.length ? [years[years.length-1]] : []);
+}
+
+function selectedVaccine(){
+  return el("vaccineFilter").value;
+}
+
+function filteredRows(){
+  const vacc = selectedVaccine();
+  return DATA.filter(r => vacc === "TODAS" ? r.vacuna !== "TOTAL AÑO" : r.vacuna === vacc);
+}
+
+function rowsForComparison(){
+  const years = selectedYears();
+  return filteredRows().filter(r => years.includes(r.anio));
+}
+
+function totalsByYear(rows){
+  const map = new Map();
+  rows.forEach(r => map.set(r.anio, (map.get(r.anio) || 0) + Number(r.total || 0)));
+  return [...map.entries()].sort((a,b)=>a[0]-b[0]).map(([anio,total]) => ({anio,total}));
+}
+
+function monthlySeriesByYear(rows){
+  const years = selectedYears();
+  const out = {};
+  years.forEach(y => out[y] = Array(12).fill(0));
+  rows.forEach(r => {
+    if(!out[r.anio]) return;
+    MONTHS.forEach((m,i) => out[r.anio][i] += Number(r[m] || 0));
+  });
+  if(el("viewMode").value === "acumulado"){
+    Object.keys(out).forEach(y => {
+      let run = 0;
+      out[y] = out[y].map(v => run += v);
+    });
+  }
+  return out;
+}
+
+function vaccineTotals(rows){
+  const map = new Map();
+  rows.forEach(r => {
+    if(r.vacuna === "TOTAL AÑO") return;
+    map.set(r.vacuna, (map.get(r.vacuna) || 0) + Number(r.total || 0));
+  });
+  return [...map.entries()].map(([vacuna,total]) => ({vacuna,total})).sort((a,b)=>b.total-a.total);
+}
+
+function topMonths(rows){
+  const total = Array(12).fill(0);
+  rows.forEach(r => MONTHS.forEach((m,i) => total[i] += Number(r[m] || 0)));
+  return MONTH_LABELS.map((mes,i) => ({mes,total: total[i]})).sort((a,b)=>b.total-a.total);
+}
+
+function buildManualYearSelector(){
+  const years = uniqueYears(DATA);
+  const box = el("manualYears");
+  box.innerHTML = "";
+  years.forEach(y => {
+    const pill = document.createElement("div");
+    pill.className = "year-pill";
+    pill.dataset.year = y;
+    pill.textContent = y;
+    pill.addEventListener("click", () => {
+      const active = [...document.querySelectorAll(".year-pill.active")];
+      if(!pill.classList.contains("active") && active.length >= 3) return;
+      pill.classList.toggle("active");
+      refresh();
+    });
+    box.appendChild(pill);
+  });
+  const target = years.length ? box.querySelector(`[data-year="${years[years.length-1]}"]`) : null;
+  if(target) target.classList.add("active");
+}
+
+function populateFilters(){
+  const vaccines = uniqueVaccines(DATA).filter(v => v !== "TOTAL AÑO");
+  el("vaccineFilter").innerHTML = `<option value="TODAS">Todas las vacunas</option>` + vaccines.map(v => `<option value="${v}">${v}</option>`).join("");
+}
+
+function renderKPIs(rows){
+  const yrTotals = totalsByYear(rows);
+  const totalVisible = yrTotals.reduce((a,b)=>a+b.total,0);
+  el("kpiTotal").textContent = fmt(totalVisible);
+  el("kpiTotalHint").textContent = `Suma de los años visibles: ${selectedYears().join(", ") || "-"}`;
+
+  if(yrTotals.length){
+    const leader = [...yrTotals].sort((a,b)=>b.total-a.total)[0];
+    el("kpiLeader").textContent = leader.anio;
+    el("kpiLeaderHint").textContent = `${fmt(leader.total)} dosis registradas`;
+  } else {
+    el("kpiLeader").textContent = "-";
+    el("kpiLeaderHint").textContent = "-";
+  }
+
+  if(yrTotals.length >= 2){
+    const prev = yrTotals[yrTotals.length-2];
+    const curr = yrTotals[yrTotals.length-1];
+    const varPct = prev.total ? ((curr.total - prev.total) / prev.total) * 100 : 0;
+    el("kpiVar").textContent = pct(varPct);
+    el("kpiVarHint").textContent = `${curr.anio} vs ${prev.anio}`;
+  } else {
+    el("kpiVar").textContent = "-";
+    el("kpiVarHint").textContent = "-";
+  }
+
+  const vaccTotals = vaccineTotals(rows);
+  if(vaccTotals.length){
+    el("kpiVac").textContent = vaccTotals[0].vacuna;
+    el("kpiVacHint").textContent = `${fmt(vaccTotals[0].total)} dosis en años visibles`;
+  } else {
+    el("kpiVac").textContent = "-";
+    el("kpiVacHint").textContent = "-";
+  }
+}
+
+function renderYearChart(rows){
+  const series = monthlySeriesByYear(rows);
+  const datasets = Object.keys(series).map((year, idx) => ({
+    label: String(year),
+    data: series[year],
+    tension: .28,
+    borderWidth: 3,
+    fill: false
+  }));
+  if(chartYears) chartYears.destroy();
+  chartYears = new Chart(el("chartYears"), {
+    type: "line",
+    data: { labels: MONTH_LABELS, datasets },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:"#dbeafe"}}, tooltip:{mode:"index",intersect:false}},
+      interaction:{mode:"index",intersect:false},
+      scales:{
+        x:{ticks:{color:"#bfd1ed"}, grid:{color:"rgba(255,255,255,.06)"}},
+        y:{ticks:{color:"#bfd1ed"}, grid:{color:"rgba(255,255,255,.06)"}}
+      }
+    }
+  });
+}
+
+function renderVaccineChart(rows){
+  const vacc = vaccineTotals(rows).slice(0,8);
+  if(chartVaccines) chartVaccines.destroy();
+  chartVaccines = new Chart(el("chartVaccines"), {
+    type: "bar",
+    data: { labels: vacc.map(x => x.vacuna), datasets: [{ label:"Dosis", data: vacc.map(x => x.total), borderWidth:1 }]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      indexAxis:'y',
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:"#bfd1ed"}, grid:{color:"rgba(255,255,255,.06)"}},
+        y:{ticks:{color:"#bfd1ed"}, grid:{display:false}}
+      }
+    }
+  });
+}
+
+function renderAlerts(rows){
+  const years = totalsByYear(rows);
+  let html = "";
+  if(!years.length){
+    el("alerts").innerHTML = `<div class="status s-bad">Sin datos visibles</div>`;
+    return;
+  }
+  const curr = years[years.length-1];
+  const prev = years.length >= 2 ? years[years.length-2] : null;
+  const vaccs = vaccineTotals(rows);
+  const top3share = vaccs.length ? (vaccs.slice(0,3).reduce((a,b)=>a+b.total,0) / vaccs.reduce((a,b)=>a+b.total,0))*100 : 0;
+  const months = topMonths(rows);
+  const peakShare = months.length ? (months[0].total / months.reduce((a,b)=>a+b.total,0))*100 : 0;
+
+  if(prev){
+    const varPct = prev.total ? ((curr.total - prev.total)/prev.total)*100 : 0;
+    if(varPct >= 10) html += `<div class="status s-ok">Avance favorable: ${curr.anio} supera a ${prev.anio} en ${pct(varPct)}</div><br>`;
+    else if(varPct > -10) html += `<div class="status s-mid">Ritmo estable: diferencia de ${pct(varPct)} entre ${curr.anio} y ${prev.anio}</div><br>`;
+    else html += `<div class="status s-bad">Caída relevante: ${curr.anio} disminuye ${pct(varPct)} respecto de ${prev.anio}</div><br>`;
+  }
+
+  if(top3share >= 85) html += `<div class="status s-mid">Alta concentración: las 3 principales vacunas explican ${pct(top3share).replace("+","")} del volumen visible</div><br>`;
+  else html += `<div class="status s-ok">Mix distribuido: menor concentración entre vacunas</div><br>`;
+
+  if(peakShare >= 22) html += `<div class="status s-mid">Pico estacional fuerte: ${months[0].mes} concentra ${pct(peakShare).replace("+","")} del período visible</div>`;
+  else html += `<div class="status s-ok">Distribución mensual relativamente equilibrada</div>`;
+
+  el("alerts").innerHTML = html;
+}
+
+function renderYearsTable(rows){
+  const data = totalsByYear(rows).sort((a,b)=>b.total-a.total);
+  let html = `<thead><tr><th>Año</th><th class="num">Total</th><th class="num">Participación</th></tr></thead><tbody>`;
+  const sum = data.reduce((a,b)=>a+b.total,0);
+  data.forEach(r => {
+    const share = sum ? (r.total/sum)*100 : 0;
+    html += `<tr><td>${r.anio}</td><td class="num">${fmt(r.total)}</td><td class="num">${share.toLocaleString("es-CL",{minimumFractionDigits:1,maximumFractionDigits:1})}%</td></tr>`;
+  });
+  html += `</tbody>`;
+  el("tblYears").innerHTML = html;
+}
+
+function renderMonthsTable(rows){
+  const data = topMonths(rows);
+  let html = `<thead><tr><th>Mes</th><th class="num">Dosis</th></tr></thead><tbody>`;
+  data.forEach(r => html += `<tr><td>${r.mes}</td><td class="num">${fmt(r.total)}</td></tr>`);
+  html += `</tbody>`;
+  el("tblMonths").innerHTML = html;
+}
+
+function renderInsights(rows){
+  const years = totalsByYear(rows);
+  const vaccs = vaccineTotals(rows);
+  const months = topMonths(rows);
+  const selected = selectedYears();
+  const last = years[years.length-1];
+  const prev = years.length>=2 ? years[years.length-2] : null;
+  const vtxt = selectedVaccine() === "TODAS" ? "todas las vacunas" : selectedVaccine();
+
+  const items = [];
+  items.push(`<b>Enfoque visible:</b> ${vtxt} en los años ${selected.join(", ")}.`);
+  if(last) items.push(`<b>Año con mayor peso visible:</b> ${last.anio === [...years].sort((a,b)=>b.total-a.total)[0].anio ? last.anio : [...years].sort((a,b)=>b.total-a.total)[0].anio}.`);
+  if(prev && last){
+    const varPct = prev.total ? ((last.total-prev.total)/prev.total)*100 : 0;
+    items.push(`<b>Lectura interanual:</b> ${last.anio} muestra una variación de ${pct(varPct)} frente a ${prev.anio}.`);
+  }
+  if(vaccs[0]) items.push(`<b>Vacuna dominante:</b> ${vaccs[0].vacuna} acumula ${fmt(vaccs[0].total)} dosis en el período visible.`);
+  if(months[0]) items.push(`<b>Mes más fuerte:</b> ${months[0].mes} es el principal punto de concentración.`);
+  el("insights").innerHTML = items.map(x => `• ${x}`).join("<br><br>");
+}
+
+function renderDecisionUse(rows){
+  const years = totalsByYear(rows);
+  const vaccs = vaccineTotals(rows);
+  const months = topMonths(rows).slice(0,3);
+  const topV = vaccs[0] ? vaccs[0].vacuna : "N/D";
+  const text = `
+  <b>Directores de CESFAM:</b> usar la comparación mensual para planificar refuerzos, refinar llamados y ajustar dotación en los meses pico.<br><br>
+  <b>Servicios de salud:</b> seguir la concentración por vacuna para reforzar abastecimiento y redistribución territorial.<br><br>
+  <b>Nivel ministerial:</b> contrastar años visibles para identificar pérdida de tracción, expansión o cambios de estrategia por producto.<br><br>
+  <b>Puntos críticos del período visible:</b> vacuna líder ${topV}; meses de mayor presión ${months.map(x => x.mes).join(", ") || "N/D"}; total visible ${fmt(years.reduce((a,b)=>a+b.total,0))} dosis.
+  `;
+  el("decisionUse").innerHTML = text;
+}
+
+function refreshMeta(){
+  const years = uniqueYears(DATA);
+  const vaccs = uniqueVaccines(DATA).filter(v => v !== "TOTAL AÑO");
+  el("metaInfo").textContent = DATA.length
+    ? `Años disponibles: ${years.join(", ")} · Vacunas: ${vaccs.join(", ")}`
+    : `Sin datos cargados`;
+  el("footerNote").textContent = DATA.length
+    ? `Modo GitHub: el archivo intenta leer automáticamente "./covid.json". Modo local: use "Actualizar JSON (clave)" con Zoe2023@.`
+    : `Cargue un JSON válido para comenzar.`;
+}
+
+function refresh(){
+  if(!DATA.length){
+    refreshMeta();
+    return;
+  }
+  const rows = rowsForComparison();
+  renderKPIs(rows);
+  renderYearChart(rows);
+  renderVaccineChart(rows);
+  renderAlerts(rows);
+  renderYearsTable(rows);
+  renderMonthsTable(rows);
+  renderInsights(rows);
+  renderDecisionUse(rows);
+  refreshMeta();
+}
+
+function applyData(rows){
+  DATA = normalizeData(rows);
+  populateFilters();
+  buildManualYearSelector();
+  refresh();
+}
+
+async function autoLoad(){
+  try{
+    const res = await fetch("./covid.json", {cache:"no-store"});
+    if(!res.ok) throw new Error("No se encontró covid.json");
+    const rows = await res.json();
+    applyData(rows);
+  }catch(e){
+    refreshMeta();
+  }
+}
+
+function manualLoadFlow(){
+  const key = prompt('Ingrese clave para actualizar JSON');
+  if(key !== 'Zoe2023@'){
+    alert('Clave incorrecta');
+    return;
+  }
+  el("fileJson").click();
+}
+
+el("btnAuto").addEventListener("click", autoLoad);
+el("btnManual").addEventListener("click", manualLoadFlow);
+el("cmpMode").addEventListener("change", () => {
+  el("manualYears").classList.toggle("hidden", el("cmpMode").value !== "manual");
+  refresh();
+});
+el("vaccineFilter").addEventListener("change", refresh);
+el("viewMode").addEventListener("change", refresh);
+el("fileJson").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  try{
+    const text = await file.text();
+    const rows = JSON.parse(text);
+    applyData(rows);
+    alert("JSON cargado correctamente");
+  }catch(err){
+    alert("No fue posible leer el JSON");
+  }finally{
+    e.target.value = "";
+  }
+});
+
+refreshMeta();
+autoLoad();
+</script>
+</body>
+</html>
